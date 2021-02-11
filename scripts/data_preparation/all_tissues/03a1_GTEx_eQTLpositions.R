@@ -20,11 +20,11 @@ eqtl = lapply(gtexTissue[[tissue]], function(i){
                          sep = "\t", as.is = T, header = T)
    pos = t(sapply(eqtl_tab[,1], function(x){
       t = strsplit(x,split = "_")[[1]]
-      c = paste0("chr", t[1])
+      cr = paste0("chr", t[1])
       s = as.numeric(t[2]) - 11 # bed is 0-based!!
       e = s + nchar(t[3]) + 10
       r = substr(t[3],start = 1, stop = 1)
-      return(c(c,s,e,r))
+      return(c(cr,s,e,r))
    }))
    cbind(pos,eqtl_tab$pval_nominal)
 })

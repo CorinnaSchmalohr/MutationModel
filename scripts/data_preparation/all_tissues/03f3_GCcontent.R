@@ -5,7 +5,7 @@ tissue = tissues[args]
 print(tissue)
 
 
-GCcontent = sapply(c("5bp", "10bp", "100bp", "1kb"), #, "1Mb"
+GCcontent = sapply(c("5bp", "10bp", "100bp", "1kb", "1Mb"), 
                    function(f){
    print(f)
    temp = read.table(paste0("data/procData/", tissue, 
@@ -23,7 +23,7 @@ GCcontent = sapply(c("5bp", "10bp", "100bp", "1kb"), #, "1Mb"
    temp[,1]/(ref[,3] - ref[,2])
 })
 colnames(GCcontent) = paste0("GCcontent_",
-                             c("5bp", "10bp", "100bp", "1kb")) #, "1Mb"
+                             c("5bp", "10bp", "100bp", "1kb", "1Mb")) 
 save(GCcontent, file = paste0("data/rdata/", tissue, 
                               "/GCcontent.RData"))
 #####

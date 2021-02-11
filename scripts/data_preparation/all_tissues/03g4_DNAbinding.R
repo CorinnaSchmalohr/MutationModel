@@ -19,7 +19,7 @@ meta = meta[grep(x = meta$Audit.NOT_COMPLIANT,pattern = "insufficient",invert = 
 rownames(meta) = meta$File.accession
 
 files = list.files(paste0("data/procData/", tissue, "/DNAbinding/"))
-files = substring(files, 1,11)
+files = unique(substring(files, 1,11))
 filesByTarget = split(files, f = meta[files, "Experiment.target"])
 
 library(corrplot)
@@ -29,6 +29,7 @@ DNAbinding = sapply(names(filesByTarget), function(target){
    res = sapply(ids, function(id){
       t = read.table(paste0("data/procData/", tissue,
                             "/DNAbinding/", id,".out.bed"))
+      t = t[order(t$V1, t$V2),]
       return(t[,5])
    })
    
@@ -38,11 +39,26 @@ DNAbinding = sapply(names(filesByTarget), function(target){
    dev.off()
    return(rowMeans(res))
 })
-
 colnames(DNAbinding) = do.call(rbind,strsplit(colnames(DNAbinding), 
-                                              split = "-"))[,1]
+                                                split = "-"))[,1]
 save(DNAbinding,file = paste0("data/rdata/", tissue, "/DNAbinding.RData"))
-rm(DNAbinding, files,meta)
+DNAbinding_100bp = sapply(names(filesByTarget), function(target){
+   ids=filesByTarget[[target]]
+   res = sapply(ids, function(id){
+      t = read.table(paste0("data/procData/", tissue,
+                            "/DNAbinding/", id,"_100bp.out.bed"))
+      t = t[order(t$V1, t$V2),]
+      return(t[,5])
+   })
+   return(rowMeans(res))
+})
+colnames(DNAbinding_100bp) = do.call(rbind,strsplit(colnames(DNAbinding_100bp), 
+                                              split = "-"))[,1]
+colnames(DNAbinding_100bp) = paste(colnames(DNAbinding_100bp),
+                                   "100bp", sep = "_")
+save(DNAbinding_100bp,file = paste0("data/rdata/", tissue, "/DNAbinding_100bp.RData"))
+
+rm(DNAbinding, files,meta, DNAbinding_100bp)
 
 # histone marks
 marks = c("H3k27ac", "H3k4me1", "H3k4me3")
@@ -53,6 +69,7 @@ histones = sapply(marks, function(m){
                             tissue, "/UCSC_tracks/wgEncodeBroadHistone",
                             l,m,
                             "StdSig.out.bed"))
+      t = t[order(t$V1, t$V2),]
       return(t[,5])
    })
    res = rowMeans(res)
@@ -61,13 +78,27 @@ histones = sapply(marks, function(m){
 colnames(histones) = paste("UCSC", colnames(histones), sep = "_")
 save(histones, 
      file = paste0("data/rdata/", tissue, "/UCSC_histones.RData"))
+histones_100bp = sapply(marks, function(m){
+   res = sapply(lines, function(l){
+      t = read.table(paste0("data/procData/", 
+                            tissue, "/UCSC_tracks/wgEncodeBroadHistone",
+                            l,m,
+                            "StdSig_100bp.out.bed"))
+      t = t[order(t$V1, t$V2),]
+      return(t[,5])
+   })
+   res = rowMeans(res)
+   return(res)
+})
+colnames(histones_100bp) = paste("UCSC", colnames(histones_100bp), sep = "_")
+colnames(histones_100bp) = paste(colnames(histones_100bp),
+                                 "100bp", sep = "_")
+save(histones_100bp, 
+     file = paste0("data/rdata/", tissue, "/UCSC_histones_100bp.RData"))
 #####
 
 
 # TF binding sites (ETS family and other) #####
-tfbs = read.table(paste0("data/procData/", tissue,
-                         "/UCSC_tracks/wgEncodeRegTfbsClusteredV3.out"),
-                  as.is = T, na.strings = ".")
 ETS = c("ELF", "ELF1", "ELF2", "NERF", "ELF4", "MEF", 
         "ELG", "GABPA", "GABP", 
         "ERG", "FLI1", "FEV",
@@ -80,11 +111,24 @@ ETS = c("ELF", "ELF1", "ELF2", "NERF", "ELF4", "MEF",
         "SPI", "SPI1", "PU.1", "SPIB", "SPIC",
         "TCF", "ELK1", "ELK4", "SAP1", "SAP-1", "ELK3", "NET", "SAP2",
         "TEL", "ETV6", "ETV7", "TEL2") 
+tfbs = read.table(paste0("data/procData/", tissue,
+                         "/UCSC_tracks/wgEncodeRegTfbsClusteredV3.out"),
+                  as.is = T, na.strings = ".")
 ETS_BS = as.integer(sapply(strsplit(tfbs[,4],split = ",", fixed = T), 
                            function(x){any(x %in% ETS)}))
 TF_BS = as.integer(sapply(strsplit(tfbs[,4],split = ",", fixed = T), 
                           function(x){any(!is.na(x))}))
-save(ETS_BS,TF_BS, file = paste0("data/rdata/", tissue, "/Tfbs.RData"))
+TFBS = cbind(ETS_BS,TF_BS)
+save(TFBS, file = paste0("data/rdata/", tissue, "/Tfbs.RData"))
+tfbs_100bp = read.table(paste0("data/procData/", tissue,
+                         "/UCSC_tracks/wgEncodeRegTfbsClusteredV3_100bp.out"),
+                  as.is = T, na.strings = ".")
+ETS_BS_100bp = as.integer(sapply(strsplit(tfbs[,4],split = ",", fixed = T), 
+                           function(x){any(x %in% ETS)}))
+TF_BS_100bp = as.integer(sapply(strsplit(tfbs[,4],split = ",", fixed = T), 
+                          function(x){any(!is.na(x))}))
+TFBS_100bp = cbind(ETS_BS_100bp,TF_BS_100bp)
+save(TFBS_100bp, file = paste0("data/rdata/", tissue, "/Tfbs_100bp.RData"))
 # to do: tissue-specific TF binding
 #####
 

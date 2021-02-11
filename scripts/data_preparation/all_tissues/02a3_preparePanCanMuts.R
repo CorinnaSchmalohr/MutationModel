@@ -83,8 +83,6 @@ write.table(TNs, file=paste0("data/procData/", tissue, "/TNs.tsv"),
 #####
 
 # combine TPs and TNs #####
-# load(paste0("data/rdata/", tissue, "/exomemuts.RData"))
-# load(paste0("data/rdata/", tissue, "/TNs.RData"))
 TNs$mutated = 0
 exomemuts$mutated = 1
 Muts = rbind(TNs,exomemuts)

@@ -13,20 +13,20 @@ do
             > data/procData/${t}/methylation/${id}_sorted.bed
          rm data/rawdata/methylation/${t}/${id}.bed
       fi
-      bedtools map -a data/procData/${t}/Muts.bed \
-         -b data/procData/${t}/methylation/${id}_sorted.bed \
-         -c 5,10,11 -o mean,mean,mean \
-         > data/procData/${t}/methylation/${id}_local.out
+      # bedtools map -a data/procData/${t}/Muts.bed \
+      #    -b data/procData/${t}/methylation/${id}_sorted.bed \
+      #    -c 5,10,11 -o mean,mean,mean \
+      #    > data/procData/${t}/methylation/${id}_local.out
       bedtools slop -i  data/procData/${t}/Muts.bed \
-         -g data/rawdata/GRCh37.p11.genome.fa.fai -b 500 | \
+         -g data/rawdata/GRCh37.p11.genome.fa.fai -b 50 | \
          bedtools map -a - -b data/procData/${t}/methylation/${id}_sorted.bed \
          -c 5,10,11 -o mean,mean,mean \
-         > data/procData/${t}/methylation/${id}_1kbp.out
-      bedtools slop -i data/procData/${t}/Muts.bed   \
-         -g data/rawdata/GRCh37.p11.genome.fa.fai -b 500000 | \
-         bedtools map -a - -b data/procData/${t}/methylation/${id}_sorted.bed \
-         -c 5,10,11 -o mean,mean,mean \
-         > data/procData/${t}/methylation/${id}_1Mbp.out
+         > data/procData/${t}/methylation/${id}_100bp.out
+      # # bedtools slop -i data/procData/${t}/Muts.bed   \
+      # #    -g data/rawdata/GRCh37.p11.genome.fa.fai -b 500000 | \
+      # #    bedtools map -a - -b data/procData/${t}/methylation/${id}_sorted.bed \
+      # #    -c 5,10,11 -o mean,mean,mean \
+      # #    > data/procData/${t}/methylation/${id}_1Mbp.out
    done
 ) &
 # 5: score 1-1000, 10:Number of reads or coverage, 11:Percentage of reads that show methylation at this position in the genome

@@ -1,5 +1,6 @@
 library(corrplot)
 library(ggplot2)
+library(data.table)
 tissues = c("luad", "skin", "colon", "ovary",
             "kidney", "prostate", "breast")
 date = "2020-01-14"

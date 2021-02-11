@@ -10,6 +10,7 @@ mappability = sapply(c("24mer", "40mer", "100mer"),function(x){
    t = read.table(paste0("data/procData/", tissue, 
                          "/UCSC_tracks/wgEncodeCrgMapabilityAlign",
                          x,".out.bed"))
+   t = t[order(t$V1, t$V2),]
    return(t[,5])
 })
 colnames(mappability) = paste0("mappability_", c("24mer", "40mer", "100mer"))
@@ -18,12 +19,14 @@ colnames(mappability) = paste0("mappability_", c("24mer", "40mer", "100mer"))
 Trf = read.table(paste0("data/procData/", tissue,
                         "/UCSC_tracks/hg19.TandemRepeatsFinder.UCSC.out"),
                  as.is = T, na.strings = ".")
+Trf = Trf[order(Trf$V1, Trf$V2),]
 Trf = as.integer(!is.na(Trf[,4]))
 
 # repeatMasker
 repeatMasker = read.table(paste0("data/procData/", tissue,
                                  "/UCSC_tracks/hg19.repeatMasker.UCSC.out"),
                           as.is = T, na.strings = ".")
+repeatMasker = repeatMasker[order(repeatMasker$V1, repeatMasker$V2),]
 repeatMasker = as.integer(is.na(repeatMasker[,4]))
 
 # save

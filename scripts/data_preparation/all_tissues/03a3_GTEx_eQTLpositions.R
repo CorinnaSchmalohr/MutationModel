@@ -11,7 +11,8 @@ if(tissue == "kidney"){
                           sep = "\t", na.strings = ".", as.is = T)
    GTEx_eqtl = GTEx_eqtl[,5]
    GTEx_eqtl = as.integer(!is.na(GTEx_eqtl))
+   save(GTEx_eqtl, file = paste0("data/rdata/",tissue,"/GTEx_eqtl.RData"))
 }
-save(GTEx_eqtl, file = paste0("data/rdata/",tissue,"/GTEx_eqtl.RData"))
+
 
      

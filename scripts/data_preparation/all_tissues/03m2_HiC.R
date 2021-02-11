@@ -243,4 +243,12 @@ if(tissue %in% c("breast", "skin", "colon", "kidney")){
    })
    HiCcomp = rowMeans(HiCcomp, na.rm = T)
    save(HiCcomp, file = paste0("data/rdata/", tissue, "/HiCcomp.RData"))
+   
+   load(paste0("data/rdata/", tissue, "/HiCints.RData"))
+   load(paste0("data/rdata/", tissue, "/HiC_TADs.RData"))
+   load(paste0("data/rdata/", tissue, "/HiCcomp.RData"))
+   HiC = cbind(HiC_ints = HiCints, HiC_inTAD, 
+               HiC_TADbound = HiC_onTADboundary, HiC_compPCA = HiCcomp)
+   HiC = HiC[,apply(HiC,2,function(x){all(is.na(x))})]
+   save(HiC, file = paste0("data/rdata/", tissue, "/HiC.RData"))
 }

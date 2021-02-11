@@ -15,7 +15,6 @@ rownames(meta) = meta$File.accession
 meta = meta[ids,]
 meth = sapply(unique(meta$Experiment.accession), function(e){
    f = meta$File.accession[meta$Experiment.accession == e]
-   print(f)
    local = sapply(f,function(i){
       tab = read.table(paste0("data/procData/", tissue,
                               "/methylation/",i,"_local.out"),
@@ -23,24 +22,23 @@ meth = sapply(unique(meta$Experiment.accession), function(e){
       tab$V6[tab$V4 < 10]  = NA
       return(tab$V6)
    })
-   kb = sapply(f,function(i){
+   window100b = sapply(f,function(i){
       tab = read.table(paste0("data/procData/", tissue,
-                              "/methylation/",i,"_1kbp.out"),
+                              "/methylation/",i,"_100bp.out"),
                        sep = "\t", as.is = T, na.strings = ".")
       tab$V6[tab$V4 < 10]  = NA
       return(tab$V6)
    })
-   Mb = sapply(f,function(i){
-      tab = read.table(paste0("data/procData/", tissue,
-                              "/methylation/",i,"_1Mbp.out"),
-                       sep = "\t", as.is = T, na.strings = ".")
-      tab$V6[tab$V4 < 10]  = NA
-      return(tab$V6)
-   })
+   # Mb = sapply(f,function(i){
+   #    tab = read.table(paste0("data/procData/", tissue,
+   #                            "/methylation/",i,"_1Mbp.out"),
+   #                     sep = "\t", as.is = T, na.strings = ".")
+   #    tab$V6[tab$V4 < 10]  = NA
+   #    return(tab$V6)
+   # })
 
    res = data.frame(methylation_local = rowMeans(local, na.rm = T),
-                    methylation_1kb = rowMeans(kb, na.rm = T),
-                    methylation_1Mb = rowMeans(Mb, na.rm = T))
+                    methylation_1kb = rowMeans(window100b, na.rm = T))
    return(res)
 })
 
@@ -52,18 +50,18 @@ if(ncol(meth)>1){
    temp = as.data.frame(meth[1,])
    colnames(temp) = meta$Biosample.term.name[(2*(1:(nrow(meta)/2)))]
    dev.off()
-   png(paste0("fig/", tissue, "/DNAmethylation/methylationCrossplot_1kbp.png"),
+   png(paste0("fig/", tissue, "/DNAmethylation/methylationCrossplot_100bp.png"),
        height = 800, width = 800)
    temp = as.data.frame(meth[2,])
    colnames(temp) = meta$Biosample.term.name[(2*(1:(nrow(meta)/2)))]
-   plot(temp, pch = 19, cex = 0.2, main = "1kbp")
+   plot(temp, pch = 19, cex = 0.2, main = "100bp")
    dev.off()
-   png(paste0("fig/", tissue, "/DNAmethylation/methylationCrossplot_1Mbp.png"),
-       height = 800, width = 800)
-   temp = as.data.frame(meth[3,])
-   colnames(temp) = meta$Biosample.term.name[(2*(1:(nrow(meta)/2)))]
-   plot(temp, pch = 19, cex = 0.2, main = "1Mbp")
-   dev.off()
+   # png(paste0("fig/", tissue, "/DNAmethylation/methylationCrossplot_1Mbp.png"),
+   #     height = 800, width = 800)
+   # temp = as.data.frame(meth[3,])
+   # colnames(temp) = meta$Biosample.term.name[(2*(1:(nrow(meta)/2)))]
+   # plot(temp, pch = 19, cex = 0.2, main = "1Mbp")
+   # dev.off()
 } else{
    # png(paste0("fig/", tissue, "/DNAmethylation/methylationCrossplot.png"),
    #     height = 800, width = 800)
@@ -78,15 +76,14 @@ methylation = apply(meth,1,function(x){
 plot(methylation)
 methylation[is.na(methylation)] = 0
 
-colnames(methylation) = paste0("methylation_",c("local",  "1kb","1Mb"))
+colnames(methylation) = paste0("methylation_",c("local",  "100bp"))
 save(methylation, file = paste0("data/rdata/", tissue,"/methylation.RData"))
 
 
 tissue2File = c("luad" = "Lung", "breast" = "Breast", "skin" = "Skin", 
             "colon" = "Colon", "kidney" = "Kidney", "prostate" = "Prostate")
 for (tissue in names(tissue2File)){
-   meth = sapply(c(".out.bed", "_1kbp.out.bed",
-                   "_1Mbp.out.bed"), function(i){
+   meth = sapply(c(".out.bed", "_100bp.out.bed"), function(i){
       tab = read.table(paste0("data/procData/", tissue,
                               "/methylation_methbank/",
                               tissue2File[tissue],i),
@@ -96,6 +93,6 @@ for (tissue in names(tissue2File)){
       return(res)
    })
    colnames(meth) = paste("methbank",
-                          c("local", "1kbp", "1Mbp"), sep = "_")
+                          c("local", "100bp"), sep = "_")
    save(meth, file = paste0("data/rdata/", tissue, "/methbank.RData"))
 }
