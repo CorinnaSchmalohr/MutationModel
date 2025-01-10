@@ -1,8 +1,8 @@
 library(ggplot2)
-library(data.table)
+library(data.table) 
 library(ROCR)
-library(ranger)
-library(berryFunctions)
+library(ranger) 
+library(berryFunctions) # for smallPlot
 library(corrplot)
 tissues = c("luad", "skin", "colon", "ovary",
             "kidney", "prostate", "breast")
@@ -21,7 +21,6 @@ names(predPerTissue) = tissues
 png(paste0("fig/performance/ROCandPRoverChrs_allTissues.png"), 
     height=2000, width=2000,pointsize=40)
 par(mfrow = c(4,4), mar = c(3.2,4,1.8,0))
-
 ROC_PR_RF_perChr = lapply(names(predPerTissue), function(tissue){ #iterate through tissues
    print(tissue)
    pred = predPerTissue[[tissue]]
@@ -334,7 +333,7 @@ dumpVar = sapply(tissues, function(tissue){
 })
 #####
 
-# compare predictor importances between tissues and between rf and glm#####
+# get predictor importances from rf and glm#####
 # manually sort the importances by function of the predictors 
 predictorOrder = {c("ref", "strand", "precedingBase","followingBase" ,
                     "aPhasedRepeats_100bp","directRepeats_100bp",
@@ -386,7 +385,7 @@ glm_imps = sapply(tissues, function(tissue){
 #####
 
 
-# predictor p-values #####
+# get predictor p-values #####
 rf_pvals = sapply(tissues, function(tissue){
    load(paste0("data/rdata/", tissue, 
                "/RFmodel/imp_pvals_withBinWise.RData"))
@@ -399,65 +398,85 @@ glm_pvals = sapply(tissues, function(tissue){
                "/data_glm/pValues_features_allChr_glm.RData"))
    pValue_features_allChr = as.matrix(pValue_features_allChr)
    temp = t(sapply(predictorOrder, function(i){
-      if(i %in% rownames(pValue_features_allChr)){(pValue_features_allChr[i,])} else{rep(NA,ncol(pValue_features_allChr))}
+      if(i %in% rownames(pValue_features_allChr)){
+         (pValue_features_allChr[i,])
+      } else{
+         rep(NA,ncol(pValue_features_allChr))
+      }
    }))
    temp[temp == 0] = 2.2e-16
    return(temp)
-}, simplify = F)
+}, simplify=F)
+#####
 
-# barplot of importances, each tissue one panel
-impsMelted = melt(rf_imps)
-colnames(impsMelted) = c("predictors", "chr", "importance", "tissue")
+
+# plotting of importances and pvalues #####
+# barplot of importances, each tissue one column
+impsMelted = do.call(rbind,lapply(names(rf_imps), function(tissue){
+   x = as.data.frame(rf_imps[[tissue]])
+   long <- reshape(x, direction = "long",
+                   ids = row.names(x), idvar = "predictors", 
+                   times = names(x), timevar = "chr",
+                   varying = names(x), v.names = "importance")
+   long$tissue = tissue
+   return(long)
+   }))
 ggplot(impsMelted, aes(x = predictors, y = importance, col = tissue)) +
    geom_boxplot(show.legend=F)  + 
    coord_flip() +
    facet_wrap(~ tissue, ncol=7,scales="free_x") +
    theme_minimal() +
    theme(text=element_text(size=20))   
-ggsave("fig/permutationImportances_binWise_alltissues.png", 
+ggsave("fig/RFpermutationImportances_binWise_alltissues.png", 
        height=12, width=12)
 # image plot of mean (over chrs) importance values
-meanImps = sapply(tissues, function(tissue){
+meanImps = as.data.frame(sapply(tissues, function(tissue){
    rowMeans(rf_imps[[tissue]])
-})
-meanImpsMelted = melt(meanImps)
-colnames(meanImpsMelted) = c("predictor", "tissue", "importance")
-ggplot(meanImpsMelted, aes(x = tissue, y = predictor)) + 
+}))
+meanImpsMelted = reshape(meanImps,  direction = "long",
+                         ids = row.names(meanImps), idvar = "predictors", 
+                         times = names(meanImps), timevar = "tissue",
+                         varying = names(meanImps), v.names = "importance")
+ggplot(meanImpsMelted, aes(x = tissue, y = predictors)) + 
    geom_raster(aes(fill=importance)) +
    scale_fill_gradient(low="grey90", high="red",na.value="grey")+
    theme(text=element_text(size=20))   
 ggsave("fig/permutationImportancesMean_binWise_alltissues.png",
        height=14, width=11)
 # image plot of importance values (like above), but scaled across tissues
-meanImpsScaled = apply(meanImps,2,function(x){
+meanImpsScaled = as.data.frame(apply(meanImps,2,function(x){
    (x-min(x,na.rm = T)) / (max(x,na.rm = T)-min(x,na.rm = T))
-})
-meanImpsScaledMelted = melt(meanImpsScaled)
-colnames(meanImpsScaledMelted) = c("predictor", "tissue", "importance")
-ggplot(meanImpsScaledMelted, aes(x = tissue, y = predictor)) + 
+}))
+meanImpsScaledMelted = reshape(meanImpsScaled,  direction = "long",
+                               ids = row.names(meanImpsScaled), idvar = "predictors", 
+                               times = names(meanImpsScaled), timevar = "tissue",
+                               varying = names(meanImpsScaled), v.names = "importance")
+ggplot(meanImpsScaledMelted, aes(x = tissue, y = predictors)) + 
    geom_raster(aes(fill=importance)) +
    scale_fill_gradient(low="grey90", high="red",na.value="grey")+
    theme(text=element_text(size=20))   
 ggsave("fig/permutationImportancesMeanScaled_binWise_alltissues.png",
        height=14, width=11)
-
 # scatter plots comparing tissues in  panels. 
 # upper triangle chr-wise values, lower triangle mean with sd
-impsReformatted = data.frame(sapply(names(rf_imps), function(x){
-   temp = melt(rf_imps[[x]])
-   if(x == names(rf_imps)[1]){
-      colnames(temp) = c("predictor", "chr", x)
+impsReformatted = data.frame(sapply(names(rf_imps), function(tissue){
+   x = as.data.frame(rf_imps[[tissue]])
+   temp = reshape(x,  direction = "long",
+                  ids = row.names(x), idvar = "predictors",
+                  times = names(x), timevar="chr", 
+                  varying = list(names(x)), v.names = "importance")
+   if(tissue == names(rf_imps)[1]){
+      temp = temp[,c("predictors", "chr", "importance")]
+      colnames(temp) = c("predictors", "chr", tissue)
       return(temp)
    } else
-      return(temp[,3])
-}, simplify=T), stringsAsFactors=F)
+      return(temp[,"importance"])
+}, simplify=F))
 colnames(impsReformatted)[1:3] = do.call(rbind,
                                          strsplit(colnames(impsReformatted)[1:3], 
                                                   split=".",fixed = T))[,2]
-impsReformatted$predictor = as.character(impsReformatted$predictor)
-impsReformatted$chr = as.character(impsReformatted$chr)
 predictorCols = setNames(rainbow(length(predictorOrder)), predictorOrder)
-png("fig/compareGLMandRFpredictorValues.png",
+png("fig/compareRFpredictorValuesBetweenTissue.png",
     height=1000, width=1000, pointsize=25)
 pairs(impsReformatted[,-(1:2)],gap=0.5, oma = c(4,4,2,2),
       panel = function(x,y){
@@ -478,10 +497,11 @@ pairs(impsReformatted[,-(1:2)],gap=0.5, oma = c(4,4,2,2),
          points(Xmeans, Ymeans, cex = 1.5,
                 col = predictorCols[names(tempX)], pch = 1)
       })
-mtext(side=1, "permutation importance", line = 3.4,)
+mtext(side=1, "permutation importance", line = 3.4)
 mtext(side=2, "permutation importance", line = 3)
 dev.off()
 # compare rf and glm coefficients
+png("fig/compareGLMandRFpredictorValues.png", width=800, height=800, pointsize=25)
 par(mfrow = c(2,4), mar = c(4,4,2,0))
 dumpVar = sapply(tissues, function(tissue){
    rf_imp = rf_imps[[tissue]]
@@ -508,7 +528,10 @@ dumpVar = sapply(tissues, function(tissue){
 plot.new()
 legend("topleft", col=predictorCols, cex = 0.75, inset=-0.1,
        legend=names(predictorCols), pch = 19, ncol = 3, xpd = NA)
+dev.off()
 # compare rf and glm coefficients, without repeatMasker, GTEx_eqtl, and Trf
+png("fig/compareGLMandRFpredictorValuesWoutOutliers.png", 
+    width=800, height=800, pointsize=25)
 toExclude = c("repeatMasker", "GTEx_eqtl", "Trf")
 par(mfrow = c(2,4), mar = c(4,4,2,0))
 dumpVar = sapply(tissues, function(tissue){
@@ -538,62 +561,9 @@ dumpVar = sapply(tissues, function(tissue){
 plot.new()
 legend("topleft", col=predictorCols, cex = 0.75, inset=-0.1,
        legend=names(predictorCols), pch = 19, ncol = 3, xpd = NA)
-# compare rf and glm coefficients, mark significance
-par(mfrow = c(2,4), mar = c(4,4,2,0))
-dumpVar = sapply(tissues, function(tissue){
-   rf_imp = rf_imps[[tissue]]
-   glm_imp = abs(glm_imps[[tissue]])
-   rf_pval = rf_pvals[,tissue]
-   glm_pval = rowMeans(glm_pvals[[tissue]])
-   plot(rf_imp, glm_imp, las = 1, pch = 1, cex = 0.5,
-        col = predictorCols[rownames(rf_imp)],
-        main = tissue, xlab = "RF permutation importance", 
-        ylab = "glm coefficient", mgp = c(2.5,1,0))
-   rfMeans = rowMeans(rf_imp, na.rm = T)
-   glmMeans= rowMeans(glm_imp, na.rm = T)
-   rfSD = apply(rf_imp,1,sd, na.rm = T)
-   glmSD = apply(glm_imp,1,sd, na.rm = T)
-   
-   arrows(x0 = rfMeans-rfSD, x1 = rfMeans+rfSD, 
-          y0 = glmMeans, y1 = glmMeans, code=0, col = (rf_pval<=0.1+1))
-   arrows(x0 = rfMeans, x1 = rfMeans, 
-          y0 = glmMeans-glmSD, y1 = glmMeans+glmSD, code=0)
-   points(rfMeans, glmMeans,
-          bg = predictorCols[rownames(rf_imp)],
-          pch = 21, col = "black")
-   text(names(rfMeans[glmMeans>=0.1]), pos=4, cex = 0.7,
-        x=rfMeans[glmMeans>=0.1], y = glmMeans[glmMeans>=0.1])
-   abline(lm(glmMeans~rfMeans, na.action="na.exclude"))
-})
-plot.new()
-legend("topleft", col=predictorCols, cex = 0.75, inset=-0.1,
-       legend=names(predictorCols), pch = 19, ncol = 3, xpd = NA)
+dev.off()
 #####
 
-# collection of plots for every tissue ####
-# roc over Chrs
-# pr over Chrs
-# TP vs TN preds violin plot
-# AUC vs mutrate
-# AUC vs nPos 
-# corrplot
-# coefficients
-# coefficients pvals
-#####
-
-# collection of plots comparison with glm #####
-# tissues x measures
-# ROC, PR, AUC barplot, TN/TP violin, coeff (dotplot rf vs glm), pval (dotplot rf vs glm)
-#####
-
-# collection of plot, comparison of tissues #####
-# ROC
-# PR
-# AUC
-# coeff barplot
-# coeff heatmap
-# AUC vx datasize
-#####
 
 
 

@@ -6,7 +6,7 @@ cr = "chr1"
 RFperformanceCrossTissue = sapply(tissues, function(tissue2predict){
    cat("data: ", tissue2predict, "\n")
    load(paste0("data/rdata/", tissue2predict, "/completeData_withBinwise.RData"))
-   data = data[removed$chr == "chr1",]
+   data = data[removed$chr == cr,]
    truePreds = data$mutated
    data$context = NULL
    data$pentamer = NULL
